@@ -100,14 +100,20 @@ RUN cd \
 # don't do make install command. because it installs openpose module to python 2.7 directory
         && cd python \
         && make -j4
+RUN pip3 install -U numpy==1.16.1 future==0.17.1 mock==3.0.5 h5py==2.9.0 keras_preprocessing==1.0.5 keras_applications==1.0.8 gast==0.2.2 futures protobuf pybind11
 
+RUN pip3 install grpcio
 
+RUN pip3 install -U pip testresources setuptools
+
+RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v43 tensorflow
+RUN pip3 install keras
 RUN apt-get install -y mosquitto-clients
 RUN pip3 install paho-mqtt
 
 RUN apt-get install -y libcanberra-gtk-module libcanberra-gtk3-module
 
-COPY edge_pose_detection.py /
-EXPOSE 1883
 
+COPY Efficientnet_model_weights_NEW4_trial4.h5 /root/openpose/models/
+EXPOSE 1883
 

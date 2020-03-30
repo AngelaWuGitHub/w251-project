@@ -6,11 +6,19 @@ import math
 import cv2
 import numpy as np
 print(sys.path)
-sys.path.append('/root/openpose/build/python')
+sys.path.append('../root/openpose/build/python')
+import json
+import tensorflow as tf
+#from keras.applications.resnet50 import preprocess_input
+#from keras.models import load_model
+np.random.seed(251)
 
 from openpose import pyopenpose as op
 
 if __name__ == '__main__':
+
+    NUM_OF_FRAME = 30
+	
     params = dict()
     params["model_folder"] = "/root/openpose/models/"
     params["hand"] = True
@@ -18,11 +26,44 @@ if __name__ == '__main__':
     params["hand_scale_number"] = 6
     params["hand_render_threshold"] = 0.2
     params["hand_render"] = -1
-
-    params["write_json"] = "/output/"
+    #params["write_json"] = "../output/"
     params["model_pose"] = "BODY_25"
     # Paths - should be the folder where Open Pose JSON output was stored
-    filepath = "/output/"
+    json_filepath = "../output/"
+    
+    # Parameters used in the manual optical flow
+    color_arr = np.random.randint(0,255,(300,3))
+    selected_feature_dict = dict()
+    selected_feature_dict['body_0'] = (color_arr[4].tolist(), 2)
+    selected_feature_dict['body_3'] = (color_arr[0].tolist(), 2)
+    selected_feature_dict['body_4'] = (color_arr[0].tolist(), 2)
+    selected_feature_dict['body_6'] = (color_arr[1].tolist(), 2)
+    selected_feature_dict['body_7'] = (color_arr[1].tolist(), 2)
+    selected_feature_dict['lefthand_4'] = (color_arr[5].tolist(), 1)
+    selected_feature_dict['lefthand_8'] = (color_arr[2].tolist(), 1)
+    selected_feature_dict['lefthand_12'] = (color_arr[2].tolist(), 1)
+    selected_feature_dict['lefthand_16'] = (color_arr[2].tolist(), 1)
+    selected_feature_dict['lefthand_20'] = (color_arr[2].tolist(), 1)
+    selected_feature_dict['righthand_4'] = (color_arr[6].tolist(), 1)
+    selected_feature_dict['righthand_8'] = (color_arr[3].tolist(), 1)
+    selected_feature_dict['righthand_12'] = (color_arr[3].tolist(), 1)
+    selected_feature_dict['righthand_16'] = (color_arr[3].tolist(), 1)
+    selected_feature_dict['righthand_20'] = (color_arr[3].tolist(), 1)
+
+	# Parameters needed for model scoring
+    model_file = 'Efficientnet_model_weights_NEW4_trial4.h5'
+    model_path="../root/openpose/models/"
+    model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file)) #load_model(os.path.join(model_path, model_file))
+    print("saved model :" ,model_saved)
+    MODEL_PREDICTION_THRESHOLD = 0.9
+
+    class_list = ['AGAIN', 'ALL', 'AWKWARD', 'BASEBALL', 'BEHAVIOR', 'CAN', 'CHAT', 'CHEAP', 
+              'CHEAT', 'CHURCH', 'COAT', 'CONFLICT', 'COURT', 'DEPOSIT', 'DEPRESS', 
+              'DOCTOR', 'DRESS', 'ENOUGH', 'NEG']
+    def conv_index_to_vocab(ind):
+    	temp_dict = dict(enumerate(class_list))
+    	return temp_dict[ind]
+    
     # Starting OpenPose
     opWrapper = op.WrapperPython()
     opWrapper.configure(params)
@@ -33,9 +74,9 @@ if __name__ == '__main__':
     outerdict={}
     keypointlist = []
     #Clean the output folder
-    for filename in os.listdir(filepath):
+    for filename in os.listdir(json_filepath):
         if filename.endswith(".json"):
-            os.remove(os.path.join(filepath,filename))
+            os.remove(os.path.join(json_filepath,filename))
 
     #Video capture from webcam
     cap = cv2.VideoCapture(1)
@@ -53,7 +94,7 @@ if __name__ == '__main__':
             #cv2.imshow('Frame',frame)
             datum.cvInputData = frame
             opWrapper.emplaceAndPop([datum])
-            writepath = os.path.join(filepath,"keypoint_{:08d}.json".format(name))
+            writepath = os.path.join(json_filepath,"keypoint_{:012d}.json".format(name))
             mode = 'w' if os.path.exists(writepath) else 'w+'
             # Display Image
             outerdict["people"]=keypointlist
@@ -61,12 +102,17 @@ if __name__ == '__main__':
             keypointdict['hand_left_keypoints_2d'] = datum.handKeypoints[0].flatten().tolist()
             keypointdict['hand_right_keypoints_2d'] = datum.handKeypoints[1].flatten().tolist()
             keypointlist.append(keypointdict.copy())#must be the copy!!!
+            ## Check the size before you save
+            if len(keypointdict['pose_keypoints_2d']) ==75 and len(keypointdict['hand_left_keypoints_2d']) ==63 and len(keypointdict['hand_right_keypoints_2d']) ==63 :
+            	save_json=True
+            
             cv2.imshow("OpenPose 1.5.0 - Tutorial Python API", datum.cvOutputData)
             #print("pose_keypoints_2d " ,datum.poseKeypoints.flatten().tolist())
 			# Custom Params (refer to include/openpose/flags.hpp for more parameters)
             #print("hand_left_keypoints_2d " ,str(datum.handKeypoints[0]))
-            with open(writepath, mode) as f :
-                json.dump(outerdict, f, indent=0 )
+            if save_json==True:
+            	with open(writepath, mode) as f :
+                	json.dump(outerdict, f, indent=0 )
             
             outerdict.clear()
             keypointlist.clear()
@@ -74,7 +120,64 @@ if __name__ == '__main__':
             print("keypointdict " ,keypointdict)
             name = name + 1
             cv2.waitKey(1)
-                    
+            
+            #Inference code goes here
+            full_file_lst = [f for f in os.listdir(json_filepath) if f.endswith('.json')]
+            if len(full_file_lst) < NUM_OF_FRAME:
+                print('skip')
+                continue
+            
+            json_files_lst = full_file_lst[-NUM_OF_FRAME:]     
+            video_feature_dict = dict()
+            for json_f in json_files_lst:
+                with open(os.path.join(json_filepath, json_f)) as ff:
+                    json_code = json.load(ff)
+        
+        		# This assume there is only one person
+                body_raw_lst = json_code['people'][0]['pose_keypoints_2d']
+                left_hand_raw_lst = json_code['people'][0]['hand_left_keypoints_2d']
+                right_hand_raw_lst = json_code['people'][0]['hand_right_keypoints_2d']
+                
+                for feat in list(selected_feature_dict.keys()):
+                    feat_num = int(feat.split('_')[1])
+                    feat_value =  video_feature_dict.get(feat, [])
+                    if 'body' in feat:
+                        feat_value.append(body_raw_lst[3*feat_num:3*(feat_num+1)])
+                        video_feature_dict[feat] = feat_value
+                    elif 'lefthand' in feat:
+                        feat_value.append(left_hand_raw_lst[3*feat_num:3*(feat_num+1)])
+                        video_feature_dict[feat] = feat_value
+                    elif 'righthand' in feat:
+                        feat_value.append(right_hand_raw_lst[3*feat_num:3*(feat_num+1)])
+                        video_feature_dict[feat] = feat_value   
+                        
+            mask = np.zeros_like(frame)
+            for (k, v) in video_feature_dict.items():
+	        # (color, thickness)
+                (c, t) = selected_feature_dict[k] 
+                x_0 = int(v[0][0])
+                y_0 = int(v[0][1])
+                for points in v[1:]:
+                    x_1 = int(points[0])
+                    y_1 = int(points[1])
+                    conf_1 = points[2]
+                    if x_0 == 0 and y_0 == 0:
+                        x_0 = x_1
+                        y_0 = y_1
+                    if x_1 != 0 and y_1 != 0:
+                        mask = cv2.line(mask, (x_0, y_0), (x_1, y_1), c, t)
+                        x_0 = x_1
+                        y_0 = y_1
+            x = cv2.resize(mask, (300,300))
+            x = np.expand_dims(x, axis=0)
+            x = tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)
+            #model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file))
+            y_pred = model_saved.predict(x)
+            if np.max(y_pred) < MODEL_PREDICTION_THRESHOLD:
+                print('?')
+            else:
+                print('Prediction: ', conv_index_to_vocab(np.argmax(y_pred)))
+           		
             # Press Q on keyboard to  exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
