@@ -94,7 +94,11 @@ if __name__ == '__main__':
             #cv2.imshow('Frame',frame)
             datum.cvInputData = frame
             opWrapper.emplaceAndPop([datum])
+<<<<<<< HEAD
             writepath = os.path.join(json_filepath,"keypoint_{:012d}.json".format(name))
+=======
+            writepath = os.path.join(filepath,"keypoint_{:012d}.json".format(name))
+>>>>>>> 22de2a3e0cdf20f095aeb10d8ec1e907a2aa50c7
             mode = 'w' if os.path.exists(writepath) else 'w+'
             # Display Image
             outerdict["people"]=keypointlist
