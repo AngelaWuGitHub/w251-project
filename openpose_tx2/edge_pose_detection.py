@@ -7,30 +7,60 @@ import cv2
 import numpy as np
 print(sys.path)
 sys.path.append('../root/openpose/build/python')
+
 import json
 import tensorflow as tf
-#from keras.applications.resnet50 import preprocess_input
-#from keras.models import load_model
+from keras.applications.resnet50 import preprocess_input
+from keras.models import load_model
 np.random.seed(251)
-
+# Below is needed to load model
+from keras_efficientnets import EfficientNetB0
 from openpose import pyopenpose as op
+
+def draw_label(img, text, pos, bg_color):
+    font_face = cv2.FONT_HERSHEY_SIMPLEX
+    scale = 1
+    color = (0, 0, 0)
+    thickness = cv2.LINE_AA
+    margin = 5
+
+    txt_size = cv2.getTextSize(text, font_face, scale, thickness)
+
+    end_x = pos[0] + txt_size[0][0] + margin
+    end_y = pos[1] - txt_size[0][1] - margin
+    cv2.putText(img, text, pos, font_face, scale, color, 2, cv2.LINE_AA)
 
 if __name__ == '__main__':
 
-    NUM_OF_FRAME = 30
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            tf.config.experimental.set_virtual_device_configuration(
+            gpus[0],
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1536)])
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+
+
+    NUM_OF_FRAME = 50
 	
     params = dict()
-    params["model_folder"] = "/root/openpose/models/"
+    params["model_folder"] = "../root/openpose/models/"
     params["hand"] = True
     params["hand_detector"] = 3
     params["hand_scale_number"] = 6
+    params["net_resolution"] = "288x288"
     params["hand_render_threshold"] = 0.2
     params["hand_render"] = -1
     #params["write_json"] = "../output/"
     params["model_pose"] = "BODY_25"
     # Paths - should be the folder where Open Pose JSON output was stored
     json_filepath = "../output/"
-    
+    save_json=False     
+    prediction="GUESSING"
     # Parameters used in the manual optical flow
     color_arr = np.random.randint(0,255,(300,3))
     selected_feature_dict = dict()
@@ -52,10 +82,13 @@ if __name__ == '__main__':
 
 	# Parameters needed for model scoring
     model_file = 'Efficientnet_model_weights_NEW4_trial4.h5'
-    model_path="../root/openpose/models/"
-    model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file)) #load_model(os.path.join(model_path, model_file))
-    print("saved model :" ,model_saved)
-    MODEL_PREDICTION_THRESHOLD = 0.9
+    model_path="../code/"
+    model_saved = load_model(os.path.join(model_path, model_file),compile=False)
+    print("saved model :" , model_saved)
+    
+    #model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file)) #load_model(os.path.join(model_path, model_file))
+    #print("saved model :" ,model_saved)
+    MODEL_PREDICTION_THRESHOLD = 0.6
 
     class_list = ['AGAIN', 'ALL', 'AWKWARD', 'BASEBALL', 'BEHAVIOR', 'CAN', 'CHAT', 'CHEAP', 
               'CHEAT', 'CHURCH', 'COAT', 'CONFLICT', 'COURT', 'DEPOSIT', 'DEPRESS', 
@@ -80,8 +113,8 @@ if __name__ == '__main__':
 
     #Video capture from webcam
     cap = cv2.VideoCapture(1)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 400)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
     fps = cap.get(cv2.CAP_PROP_FPS)
     print("The current fps is " ,fps)
     name= 1 #name of the json file
@@ -94,11 +127,7 @@ if __name__ == '__main__':
             #cv2.imshow('Frame',frame)
             datum.cvInputData = frame
             opWrapper.emplaceAndPop([datum])
-<<<<<<< HEAD
             writepath = os.path.join(json_filepath,"keypoint_{:012d}.json".format(name))
-=======
-            writepath = os.path.join(filepath,"keypoint_{:012d}.json".format(name))
->>>>>>> 22de2a3e0cdf20f095aeb10d8ec1e907a2aa50c7
             mode = 'w' if os.path.exists(writepath) else 'w+'
             # Display Image
             outerdict["people"]=keypointlist
@@ -110,7 +139,11 @@ if __name__ == '__main__':
             if len(keypointdict['pose_keypoints_2d']) ==75 and len(keypointdict['hand_left_keypoints_2d']) ==63 and len(keypointdict['hand_right_keypoints_2d']) ==63 :
             	save_json=True
             
-            cv2.imshow("OpenPose 1.5.0 - Tutorial Python API", datum.cvOutputData)
+            draw_label(frame, prediction, (50,50), (255,255,255))
+            cv2.imshow('Frame',frame)
+            # Display the resulting frame
+            #cv2.imshow("OpenPose - Gesture Detection", datum.cvOutputData)
+
             #print("pose_keypoints_2d " ,datum.poseKeypoints.flatten().tolist())
 			# Custom Params (refer to include/openpose/flags.hpp for more parameters)
             #print("hand_left_keypoints_2d " ,str(datum.handKeypoints[0]))
@@ -121,7 +154,7 @@ if __name__ == '__main__':
             outerdict.clear()
             keypointlist.clear()
             keypointdict.clear()
-            print("keypointdict " ,keypointdict)
+            #print("keypointdict " ,keypointdict)
             name = name + 1
             cv2.waitKey(1)
             
@@ -172,14 +205,16 @@ if __name__ == '__main__':
                         mask = cv2.line(mask, (x_0, y_0), (x_1, y_1), c, t)
                         x_0 = x_1
                         y_0 = y_1
-            x = cv2.resize(mask, (300,300))
+            x = cv2.resize(mask, (224,224))
             x = np.expand_dims(x, axis=0)
-            x = tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)
-            #model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file))
+            x = preprocess_input(x)#tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)
             y_pred = model_saved.predict(x)
+            print("y_pred" ,y_pred)
             if np.max(y_pred) < MODEL_PREDICTION_THRESHOLD:
                 print('?')
+                prediction='Too hard to guess'
             else:
+                prediction = conv_index_to_vocab(np.argmax(y_pred))
                 print('Prediction: ', conv_index_to_vocab(np.argmax(y_pred)))
            		
             # Press Q on keyboard to  exit
