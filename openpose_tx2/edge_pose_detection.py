@@ -16,6 +16,7 @@ np.random.seed(251)
 # Below is needed to load model
 from keras_efficientnets import EfficientNetB0
 from openpose import pyopenpose as op
+from matplotlib import pyplot as plt
 
 def draw_label(img, text, pos, bg_color):
     font_face = cv2.FONT_HERSHEY_SIMPLEX
@@ -37,7 +38,7 @@ if __name__ == '__main__':
         try:
             tf.config.experimental.set_virtual_device_configuration(
             gpus[0],
-            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1536)])
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
@@ -45,8 +46,8 @@ if __name__ == '__main__':
             print(e)
 
 
-    NUM_OF_FRAME = 50
-	
+    NUM_OF_FRAME = 25
+    color_step = 200 / NUM_OF_FRAME
     params = dict()
     params["model_folder"] = "../root/openpose/models/"
     params["hand"] = True
@@ -62,25 +63,34 @@ if __name__ == '__main__':
     save_json=False     
     prediction="GUESSING"
     # Parameters used in the manual optical flow
-    color_arr = np.random.randint(0,255,(300,3))
-    selected_feature_dict = dict()
-    selected_feature_dict['body_0'] = (color_arr[4].tolist(), 2)
-    selected_feature_dict['body_3'] = (color_arr[0].tolist(), 2)
-    selected_feature_dict['body_4'] = (color_arr[0].tolist(), 2)
-    selected_feature_dict['body_6'] = (color_arr[1].tolist(), 2)
-    selected_feature_dict['body_7'] = (color_arr[1].tolist(), 2)
-    selected_feature_dict['lefthand_4'] = (color_arr[5].tolist(), 1)
-    selected_feature_dict['lefthand_8'] = (color_arr[2].tolist(), 1)
-    selected_feature_dict['lefthand_12'] = (color_arr[2].tolist(), 1)
-    selected_feature_dict['lefthand_16'] = (color_arr[2].tolist(), 1)
-    selected_feature_dict['lefthand_20'] = (color_arr[2].tolist(), 1)
-    selected_feature_dict['righthand_4'] = (color_arr[6].tolist(), 1)
-    selected_feature_dict['righthand_8'] = (color_arr[3].tolist(), 1)
-    selected_feature_dict['righthand_12'] = (color_arr[3].tolist(), 1)
-    selected_feature_dict['righthand_16'] = (color_arr[3].tolist(), 1)
-    selected_feature_dict['righthand_20'] = (color_arr[3].tolist(), 1)
+    color_red = [255, 0, 0]
+    color_green = [0, 255, 0]
+    color_blue = [0, 0, 255]
+    color_yellow = [255, 255, 0]
+    color_pink = [255, 0, 255]
+    color_teal = [0, 255, 255]
+    color_white = [255, 255, 255]
 
-	# Parameters needed for model scoring
+    selected_feature_dict = dict()
+    # add head detection
+    selected_feature_dict['body_0'] = (color_white, 2)
+    selected_feature_dict['body_3'] = (color_red, 2)
+    selected_feature_dict['body_4'] = (color_red, 2)
+    selected_feature_dict['body_6'] = (color_green, 2)
+    selected_feature_dict['body_7'] = (color_green, 2)
+    # different color for thumbs
+    selected_feature_dict['lefthand_4'] = (color_blue, 1)
+    selected_feature_dict['lefthand_8'] = (color_yellow, 1)
+    selected_feature_dict['lefthand_12'] = (color_yellow, 1)
+    selected_feature_dict['lefthand_16'] = (color_yellow, 1)
+    selected_feature_dict['lefthand_20'] = (color_yellow, 1)
+    # different color for thumbs
+    selected_feature_dict['righthand_4'] = (color_pink, 1)
+    selected_feature_dict['righthand_8'] = (color_teal, 1)
+    selected_feature_dict['righthand_12'] = (color_teal, 1)
+    selected_feature_dict['righthand_16'] = (color_teal, 1)
+    selected_feature_dict['righthand_20'] = (color_teal, 1)
+    # Parameters needed for model scoring
     model_file = 'Efficientnet_model_weights_NEW4_trial4.h5'
     model_path="../code/"
     model_saved = load_model(os.path.join(model_path, model_file),compile=False)
@@ -88,7 +98,7 @@ if __name__ == '__main__':
     
     #model_saved = tf.keras.models.load_model(os.path.join(model_path, model_file)) #load_model(os.path.join(model_path, model_file))
     #print("saved model :" ,model_saved)
-    MODEL_PREDICTION_THRESHOLD = 0.6
+    MODEL_PREDICTION_THRESHOLD = 0.2
 
     class_list = ['AGAIN', 'ALL', 'AWKWARD', 'BASEBALL', 'BEHAVIOR', 'CAN', 'CHAT', 'CHEAP', 
               'CHEAT', 'CHURCH', 'COAT', 'CONFLICT', 'COURT', 'DEPOSIT', 'DEPRESS', 
@@ -139,7 +149,7 @@ if __name__ == '__main__':
             if len(keypointdict['pose_keypoints_2d']) ==75 and len(keypointdict['hand_left_keypoints_2d']) ==63 and len(keypointdict['hand_right_keypoints_2d']) ==63 :
             	save_json=True
             
-            draw_label(frame, prediction, (50,50), (255,255,255))
+            draw_label(frame, prediction, (30,30), (255,255,255))
             cv2.imshow('Frame',frame)
             # Display the resulting frame
             #cv2.imshow("OpenPose - Gesture Detection", datum.cvOutputData)
@@ -156,7 +166,7 @@ if __name__ == '__main__':
             keypointdict.clear()
             #print("keypointdict " ,keypointdict)
             name = name + 1
-            cv2.waitKey(1)
+            cv2.waitKey(10)
             
             #Inference code goes here
             full_file_lst = [f for f in os.listdir(json_filepath) if f.endswith('.json')]
@@ -189,9 +199,12 @@ if __name__ == '__main__':
                         video_feature_dict[feat] = feat_value   
                         
             mask = np.zeros_like(frame)
+            #imgpath = os.path.join(model_path,"image_{:012d}.png".format(name))
+            #plt.imsave(imgpath, mask)
             for (k, v) in video_feature_dict.items():
 	        # (color, thickness)
-                (c, t) = selected_feature_dict[k] 
+                (c, t) = selected_feature_dict[k]
+                color_counter = 0
                 x_0 = int(v[0][0])
                 y_0 = int(v[0][1])
                 for points in v[1:]:
@@ -202,9 +215,13 @@ if __name__ == '__main__':
                         x_0 = x_1
                         y_0 = y_1
                     if x_1 != 0 and y_1 != 0:
+                        c = [max(color_i-color_step,0) for color_i in c]
                         mask = cv2.line(mask, (x_0, y_0), (x_1, y_1), c, t)
+                        color_counter += 1
                         x_0 = x_1
                         y_0 = y_1
+            imgpath = os.path.join(model_path,"image_{:012d}.png".format(name))
+            plt.imsave(imgpath, mask)  
             x = cv2.resize(mask, (224,224))
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)#tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)

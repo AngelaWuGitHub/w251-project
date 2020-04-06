@@ -176,6 +176,6 @@ ENV PATH=/usr/local/cuda-10.0/bin:$PATH
 #RUN sudo apt-get install --no-install-recommends libcudnn7=7.6.3.30-1+cuda10.0 libcudnn7-dev=7.6.3.30-1+cuda10.0
 RUN apt-get autoremove
 
-
+RUN pip3 install matplotlib
 #clean
 RUN apt-get clean
