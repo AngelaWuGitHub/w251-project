@@ -1,15 +1,14 @@
-# w251-project
+# w251-project: Sign Language Action Detection
 
+## 1. Abstract (Gautam)
 
-## 1. Abstract
+## 2. Intorduction and motivation (Gautam)
 
-## 2. Intorduction and motivation
+## 3. Research (Gautam)
 
-## 3. Research
+## 4. Datasets (Gautam)
 
-## 4. Datasets
-
-## 5. Different Modeling Approaches
+## 5. Different Modeling Approaches (Gautam)
 
 ## 6. final model and inspiration (Angela)
 ### a. Optical flow
@@ -22,14 +21,14 @@
 ### h. Overlay Order
 ### i. Final Model
 
-## 7. Cloud Configuration
+## 7. Cloud Configuration (Gautam)
 
-## 8. Model Inference on TX2
+## 8. Model Inference on TX2 (Aditi)
 
-## 9. Future Work
+## 9. Future Work (Aditi)
 
-## 10. Acknoeledgements
+## 10. Acknoeledgements (Aditi)
 
-## 11. References
+## 11. References (All)
 
 
