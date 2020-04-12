@@ -10,7 +10,7 @@
 
 ## 5. Different Modeling Approaches (Gautam)
 
-## 6. final model and inspiration (Angela)
+## 6. Final model and inspiration (Angela)
 ### a. Optical flow
 ### b. Openpose
 ### c. Key Features
