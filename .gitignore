@@ -3,5 +3,8 @@
 
 # But not
 !.gitignore
-!*.ipynb
+!/analysis/
+!/analysis/**
+!/writeup_videos_images/
+!/writeup_videos_images/**
 
