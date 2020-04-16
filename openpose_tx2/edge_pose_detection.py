@@ -10,13 +10,14 @@ sys.path.append('../root/openpose/build/python')
 
 import json
 import tensorflow as tf
-from keras.applications.resnet50 import preprocess_input
+#from keras.applications.resnet50 import preprocess_input
 from keras.models import load_model
 np.random.seed(251)
 # Below is needed to load model
-from keras_efficientnets import EfficientNetB0
+from keras_efficientnets import EfficientNetB0,preprocess_input
 from openpose import pyopenpose as op
 from matplotlib import pyplot as plt
+import time
 
 def draw_label(img, text, pos, bg_color):
     font_face = cv2.FONT_HERSHEY_SIMPLEX
@@ -46,7 +47,7 @@ if __name__ == '__main__':
             print(e)
 
 
-    NUM_OF_FRAME = 25
+    NUM_OF_FRAME = 15
     color_step = 200 / NUM_OF_FRAME
     params = dict()
     params["model_folder"] = "../root/openpose/models/"
@@ -91,7 +92,7 @@ if __name__ == '__main__':
     selected_feature_dict['righthand_16'] = (color_teal, 1)
     selected_feature_dict['righthand_20'] = (color_teal, 1)
     # Parameters needed for model scoring
-    model_file = 'Efficientnet_model_weights_NEW4_trial4.h5'
+    model_file = 'Efficientnet_model_weights_NEW4_trial4_model2.h5'
     model_path="../code/"
     model_saved = load_model(os.path.join(model_path, model_file),compile=False)
     print("saved model :" , model_saved)
@@ -131,6 +132,7 @@ if __name__ == '__main__':
     if (cap.isOpened()== False):
         print("Error opening video stream or file")
     while(cap.isOpened()):
+        start = time.time()
         ret, frame = cap.read()
         if ret == True:
             # Display the resulting frame
@@ -166,9 +168,13 @@ if __name__ == '__main__':
             keypointdict.clear()
             #print("keypointdict " ,keypointdict)
             name = name + 1
-            cv2.waitKey(10)
-            
+            cv2.waitKey(1)
+            print("counter :" ,name) 
             #Inference code goes here
+            #if name %NUM_OF_FRAME !=0:
+            #    name= name+1
+            #    continue
+
             full_file_lst = [f for f in os.listdir(json_filepath) if f.endswith('.json')]
             if len(full_file_lst) < NUM_OF_FRAME:
                 print('skip')
@@ -217,11 +223,15 @@ if __name__ == '__main__':
                     if x_1 != 0 and y_1 != 0:
                         c = [max(color_i-color_step,0) for color_i in c]
                         mask = cv2.line(mask, (x_0, y_0), (x_1, y_1), c, t)
+                        #cv2.imshow('mask ',mask)
                         color_counter += 1
                         x_0 = x_1
                         y_0 = y_1
             imgpath = os.path.join(model_path,"image_{:012d}.png".format(name))
-            plt.imsave(imgpath, mask)  
+            plt.imsave(imgpath, mask)
+            end = time.time()
+            print("Timer: ",end - start)
+            #cv2.imshow('Frame',frame)
             x = cv2.resize(mask, (224,224))
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)#tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)
@@ -233,7 +243,7 @@ if __name__ == '__main__':
             else:
                 prediction = conv_index_to_vocab(np.argmax(y_pred))
                 print('Prediction: ', conv_index_to_vocab(np.argmax(y_pred)))
-           		
+            #name= name+1
             # Press Q on keyboard to  exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

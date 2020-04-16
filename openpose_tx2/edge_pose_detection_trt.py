@@ -10,14 +10,14 @@ sys.path.append('../root/openpose/build/python')
 
 import json
 import tensorflow as tf
-from keras.applications.resnet50 import preprocess_input
+#from keras.applications.resnet50 import preprocess_input
 from keras.models import load_model
 np.random.seed(251)
 # Below is needed to load model
-from keras_efficientnets import EfficientNetB0
+from keras_efficientnets import EfficientNetB0 ,preprocess_input
 from openpose import pyopenpose as op
 from matplotlib import pyplot as plt
-
+import warnings
 def draw_label(img, text, pos, bg_color):
     font_face = cv2.FONT_HERSHEY_SIMPLEX
     scale = 1
@@ -31,8 +31,24 @@ def draw_label(img, text, pos, bg_color):
     end_y = pos[1] - txt_size[0][1] - margin
     cv2.putText(img, text, pos, font_face, scale, color, 2, cv2.LINE_AA)
 
-if __name__ == '__main__':
 
+output_names = ['dense_1/Softmax']
+input_names = ['model_2_input']
+
+
+
+def get_frozen_graph(graph_file):
+    """Read Frozen Graph file from disk."""
+    with tf.gfile.FastGFile(graph_file, "rb") as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+    return graph_def
+
+
+
+if __name__ == '__main__':
+    
+    warnings.filterwarnings("ignore")
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
         try:
@@ -46,7 +62,7 @@ if __name__ == '__main__':
             print(e)
 
 
-    NUM_OF_FRAME = 25
+    NUM_OF_FRAME = 20
     color_step = 200 / NUM_OF_FRAME
     params = dict()
     params["model_folder"] = "../root/openpose/models/"
@@ -92,6 +108,31 @@ if __name__ == '__main__':
     selected_feature_dict['righthand_20'] = (color_teal, 1)
     # Parameters needed for model scoring
     model_file = 'trt_graph.pb'
+    
+    trt_graph = get_frozen_graph(model_file) 
+    #Create session and load graph
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
+    tf_sess = tf.Session(config=tf_config)
+    tf.import_graph_def(trt_graph, name='')
+
+            # Get graph input size
+    for node in trt_graph.node:
+        print("node ======> ", node.name) 
+        if 'input_' in node.name:
+            size = node.attr['shape'].shape
+            image_size = [size.dim[i].size for i in range(1, 4)]
+            break
+            #print("image_size: {}".format(image_size))
+
+            # input and output tensor names.
+    input_tensor_name = input_names[0] + ":0"
+    output_tensor_name = output_names[0] + ":0"
+
+    print("input_tensor_name: {}\noutput_tensor_name: {}".format(input_tensor_name, output_tensor_name))
+    output_tensor = tf_sess.graph.get_tensor_by_name(output_tensor_name)
+
+
     #model_path="../code/"
     #model_saved = load_model(os.path.join(model_path, model_file),compile=False)
     #print("saved model :" , model_saved)
@@ -171,7 +212,7 @@ if __name__ == '__main__':
             #Inference code goes here
             full_file_lst = [f for f in os.listdir(json_filepath) if f.endswith('.json')]
             if len(full_file_lst) < NUM_OF_FRAME:
-                #print('skip')
+                print('skip')
                 continue
             
             json_files_lst = full_file_lst[-NUM_OF_FRAME:]     
@@ -222,51 +263,11 @@ if __name__ == '__main__':
                         y_0 = y_1
 
             model_path = '.'
-            imgpath = os.path.join(model_path,"image_{:012d}.png".format(name))
-            plt.imsave(imgpath, mask)  
             x = cv2.resize(mask, (224,224))
             x = np.expand_dims(x, axis=0)
             x = preprocess_input(x)#tf.keras.applications.resnet50.preprocess_input(x) #preprocess_input(x)
 
 
-            output_names = ['dense_1/Softmax']
-            input_names = ['model_2_input']
-
-            import tensorflow as tf
-
-
-            def get_frozen_graph(graph_file):
-                """Read Frozen Graph file from disk."""
-                with tf.gfile.FastGFile(graph_file, "rb") as f:
-                    graph_def = tf.GraphDef()
-                    graph_def.ParseFromString(f.read())
-                return graph_def
-
-            trt_graph = get_frozen_graph(model_file) 
-            #Create session and load graph
-            tf_config = tf.ConfigProto()
-            tf_config.gpu_options.allow_growth = True
-            tf_sess = tf.Session(config=tf_config)
-            tf.import_graph_def(trt_graph, name='')
-
-            # Get graph input size
-            for node in trt_graph.node:
-                print("node ======> ", node.name) 
-                if 'input_' in node.name:
-                    size = node.attr['shape'].shape
-                    image_size = [size.dim[i].size for i in range(1, 4)]
-                    break
-            #print("image_size: {}".format(image_size))
-
-            # input and output tensor names.
-            input_tensor_name = input_names[0] + ":0"
-            output_tensor_name = output_names[0] + ":0"
-
-            print("input_tensor_name: {}\noutput_tensor_name: {}".format(input_tensor_name, output_tensor_name))
-            output_tensor = tf_sess.graph.get_tensor_by_name(output_tensor_name)
-
-            from tensorflow.keras.preprocessing import image
-            from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
 
             # Optional image to test model prediction.
             feed_dict = {
@@ -275,12 +276,13 @@ if __name__ == '__main__':
             y_pred = tf_sess.run(output_tensor, feed_dict)
             #print("y_pred" ,y_pred)
             if np.max(y_pred) < MODEL_PREDICTION_THRESHOLD:
-                #print('?')
+                print('?')
                 prediction='Too hard to guess'
             else:
                 prediction = conv_index_to_vocab(np.argmax(y_pred))
-                #print('Prediction: ', conv_index_to_vocab(np.argmax(y_pred)))
-           		
+                print('Prediction: ', conv_index_to_vocab(np.argmax(y_pred)))
+            
+            feed_dict={}
             # Press Q on keyboard to  exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

@@ -131,24 +131,6 @@ RUN cd \
         && cd python \
         && make -j4
 
-#Install tensorflow
-RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v43 tensorflow==1.15.2
-
-#Install Efficient net
-RUN pip3 install cython
-RUN pip3 install keras_efficientnets
-#Install Cudnn 7.6.3
-
-#ENV CUDNN_VERSION 7.6.5.32
-#LABEL com.nvidia.cudnn.version="${CUDNN_VERSION}"
-
-#RUN apt-get update && apt-get install -y --no-install-recommends \
- #   libcudnn7=$CUDNN_VERSION-1+cuda10.0 \
-#libcudnn7-dev=$CUDNN_VERSION-1+cuda10.0 \
-#&& \
- #   apt-mark hold libcudnn7 && \
-  #  rm -rf /var/lib/apt/lists/*
-
 ARG URL=http://169.44.201.108:7002/jetpacks/4.3
 
 RUN apt-get update && apt-get install -y --no-install-recommends gnupg2 apt-utils bzip2 curl sudo unp && apt-get clean && rm -rf /var/cache/apt
@@ -173,9 +155,44 @@ RUN curl $URL/cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb -so cuda-repo-l4
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/aarch64-linux-gnu/tegra
 ENV PATH=/usr/local/cuda-10.0/bin:$PATH
 
+#Install tensorflow
+RUN pip3 install --pre --extra-index-url https://developer.download.nvidia.com/compute/redist/jp/v43 tensorflow==1.15.2
+
+#Install Efficient net
+RUN pip3 install cython
+RUN pip3 install keras_efficientnets
+#Install Cudnn 7.6.3
+
+
 #RUN sudo apt-get install --no-install-recommends libcudnn7=7.6.3.30-1+cuda10.0 libcudnn7-dev=7.6.3.30-1+cuda10.0
 RUN apt-get autoremove
 
 RUN pip3 install matplotlib
+#TensorRT
+RUN curl $URL/libnvinfer6_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvinfer6_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvinfer-dev_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvinfer-dev_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvinfer-samples_6.0.1-1+cuda10.0_all.deb -so /tmp/libnvinfer-samples_6.0.1-1+cuda10.0_all.deb
+RUN curl $URL/tensorrt_6.0.1.10-1+cuda10.0_arm64.deb -so /tmp/tensorrt_6.0.1.10-1+cuda10.0_arm64.deb
+RUN curl $URL/python3-libnvinfer_6.0.1-1+cuda10.0_arm64.deb -so /tmp/python3-libnvinfer_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/python3-libnvinfer-dev_6.0.1-1+cuda10.0_arm64.deb -so /tmp/python3-libnvinfer-dev_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvinfer-plugin6_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvinfer-plugin6_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvinfer-plugin-dev_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvinfer-plugin-dev_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvparsers6_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvparsers6_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvparsers-dev_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvparsers-dev_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvonnxparsers6_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvonnxparsers6_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvonnxparsers-dev_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvonnxparsers-dev_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/libnvinfer-doc_6.0.1-1+cuda10.0_all.deb -so /tmp/libnvinfer-doc_6.0.1-1+cuda10.0_all.deb
+RUN curl $URL/libnvinfer-bin_6.0.1-1+cuda10.0_arm64.deb -so /tmp/libnvinfer-bin_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/graphsurgeon-tf_6.0.1-1+cuda10.0_arm64.deb -so /tmp/graphsurgeon-tf_6.0.1-1+cuda10.0_arm64.deb
+RUN curl $URL/uff-converter-tf_6.0.1-1+cuda10.0_arm64.deb -so /tmp/uff-converter-tf_6.0.1-1+cuda10.0_arm64.deb
+
+RUN apt install -y /tmp/*.deb
+RUN apt install -y tensorrt python3-numpy
+
+RUN rm /tmp/*.deb
+
+# Clean up
+RUN rm -fr /tmp/* /var/cache/apt/* && apt-get clean
+RUN pip3 install pycuda
 #clean
 RUN apt-get clean
