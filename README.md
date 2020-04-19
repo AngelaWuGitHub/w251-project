@@ -12,13 +12,13 @@ https://s3.console.aws.amazon.com/s3/buckets/w251-project/data/raw/?region=us-we
 
 ## Steps to execute
 The diagram below lists out the steps required in training the model on an ibmcloud instance. All scripts required for execution are in "ibmcloud" folder.
-The scripts assume the following structure on AWS:
-w251-project
-|_____data
-        |_____raw
-        |_____processed
-                  |______json
-                  |______videos
+The scripts assume the following structure on AWS:  
+w251-project  
+|_____data  
+        |_____raw  
+        |_____processed  
+                  |______json  
+                  |______videos  
 
 
 
