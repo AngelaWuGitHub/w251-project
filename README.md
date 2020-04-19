@@ -17,8 +17,8 @@ w251-project
 |_____data  
         |_____raw  
         |_____processed    
-                        |______json  
-                        |______videos  
+\t\t                        |______json  
+\t\t                        |______videos  
 
 
 
