@@ -1,8 +1,19 @@
 # w251-project
 
 ## What is this project about
-The ability to use deep learning networks for sign language recognition has gained considerable attention over the past few years. There have been considerable advancements in using both 2D and 3D data representing letters, words and actions of the sign language to their written language translation. 
+The ability to use deep learning networks for sign language recognition has gained considerable attention over the past few years. There have been considerable advancements in using both 2D and 3D data representing letters, words and actions of the sign language to their written language translation.   
 We implement an approach of training video data to achieve a considerable accuracy on inferring words when deployed on a Jetson TX2. 
+
+## Setup needed
+### On ibmcloud
+Ubuntu Linux 18.04  
+CUDA  Release 10.2 - NVIDIA GPU Version  
+OpenCV 3.2  
+OpenPose 1.6 built from source: https://github.com/CMU-Perceptual-Computing-Lab/openpose  
+s3fs-fuse from https://github.com/s3fs-fuse/s3fs-fuse  
+
+### On Jetson TX2
+Make sure you have Docker installed on Ubuntu 18.04. The Dockerfile in openpose_tx2 folder will take care of the rest. 
 
 ## Data
 The dataset used in the project was the ASLLVD (American sign language lexicon video dataset) present here: 
