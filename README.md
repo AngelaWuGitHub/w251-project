@@ -16,7 +16,7 @@ The scripts assume the following structure on AWS:
 w251-project  
 |_____data  
         |_____raw  
-        |_____processed  
+        |_____processed    
                   |______json  
                   |______videos  
 
