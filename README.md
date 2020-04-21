@@ -4,6 +4,9 @@
 The ability to use deep learning networks for sign language recognition has gained considerable attention over the past few years. There have been considerable advancements in using both 2D and 3D data representing letters, words and actions of the sign language to their written language translation.   
 We implement an approach of training video data to achieve a considerable accuracy on inferring words when deployed on a Jetson TX2. 
 
+Link to the final paper: https://docs.google.com/document/d/1ZkVP6Zj7xXVbppXE1y87Gxn9kITdWSRlFDxZ2U7kVcM/edit?usp=sharing  
+Link to the presentation: https://docs.google.com/presentation/d/1L1PA-PZdezKvdIjhAt85fLwDmSKtzNONUBU-zVOp97Q/edit?usp=sharing
+
 ## Setup needed
 ### On ibmcloud
 Ubuntu Linux 18.04  
